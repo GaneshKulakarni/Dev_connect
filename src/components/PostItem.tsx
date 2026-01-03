@@ -27,42 +27,42 @@ const PostItem = ({ post }: Props) => {
                 )}
 
                 {/* Content */}
-                <div className="p-5 space-y-4">
+                <div className="p-6 space-y-4 flex-grow">
                     {/* Header with Avatar */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         {post.avatar_url ? (
                             <img 
                                 src={post.avatar_url} 
                                 alt="User avatar"
-                                className="w-9 h-9 rounded-full ring-1 ring-slate-700 object-cover shrink-0"
+                                className="w-11 h-11 rounded-full ring-1 ring-slate-700 object-cover shrink-0"
                             />
                         ) : (
-                            <div className="w-9 h-9 rounded-full bg-linear-to-br from-cyan-400 to-blue-500 shrink-0"></div>
+                            <div className="w-11 h-11 rounded-full bg-linear-to-br from-cyan-400 to-blue-500 shrink-0"></div>
                         )}
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-white truncate">
+                            <h3 className="text-base font-semibold text-white truncate">
                                 {post.title}
                             </h3>
-                            <p className="text-xs text-gray-500">2h ago</p>
+                            <p className="text-sm text-gray-500">2h ago</p>
                         </div>
                     </div>
 
                     {/* Title and Content Preview */}
                     <div className="space-y-2">
-                        <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed">
-                            {post.content.length > 100 ? post.content.slice(0, 100) + '...' : post.content}
+                        <p className="text-base text-gray-300 line-clamp-3 leading-relaxed">
+                            {post.content.length > 150 ? post.content.slice(0, 150) + '...' : post.content}
                         </p>
                     </div>
 
                     {/* Stats and Actions */}
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-800 mt-auto">
                         <div className="flex items-center gap-4 text-gray-400">
-                            <div className="flex items-center gap-1 text-xs">
-                                <Heart className="w-4 h-4" />
+                            <div className="flex items-center gap-1 text-sm">
+                                <Heart className="w-5 h-5" />
                                 <span>{likeCount}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs">
-                                <MessageCircle className="w-4 h-4" />
+                            <div className="flex items-center gap-1 text-sm">
+                                <MessageCircle className="w-5 h-5" />
                                 <span>0</span>
                             </div>
                         </div>
