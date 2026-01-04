@@ -2,8 +2,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext';
-import { Code2, Menu, X, LogOut, User as UserIcon, Settings } from 'lucide-react';
-import GlobalSearch from './GlobalSearch';
+
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,13 +24,7 @@ const Navbar = () => {
                   <span>Dev<span className="text-cyan-400">Connect</span></span>
                 </Link>
 
-                {/* Desktop nav links */}
-                <div className="hidden md:flex items-center gap-8">
-                    <Link to="/" className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200">~/home</Link>
-                    <Link to="/create" className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200">~/create</Link>
-                    <Link to="/communities" className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200">~/communities</Link>
-                    <Link to="/communities/create" className="font-mono text-sm mr-9 text-gray-300 hover:text-cyan-400 transition duration-200">~/new-community</Link>
-                </div>
+
             </div>
 
             {/* Right side: Search + Auth */}
@@ -118,11 +111,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-slate-900 border-t border-cyan-900/30 py-4 px-4 space-y-4">
-          <div className="mb-4">
-            <GlobalSearch />
+
           </div>
           <div className="flex flex-col gap-4">
             <Link to="/" onClick={() => setIsMenuOpen(false)} className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition">~/home</Link>
