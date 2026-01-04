@@ -84,7 +84,7 @@ const searchAll = async (q: string): Promise<SearchResult> => {
   try {
     // Communities search by name or description
     const communitiesPromise = supabase
-      .from("Communities")
+      .from("communities")
       .select("id, name, description")
       .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
       .limit(8);

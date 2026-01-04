@@ -18,15 +18,15 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16">
             {/* Left side: Logo + Nav Links */}
-            <div className="flex items-center gap-12">
+            <div className="flex items-center gap-16">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 font-mono font-bold text-xl hover:text-cyan-400 transition group">
                   <Code2 className="w-6 h-6 text-cyan-400 group-hover:animate-pulse" />
-                  <span>Dev<span className="text-cyan-400">Connect</span></span>
+                  <span><span className="text-cyan-400">Dev</span>Connect</span>
                 </Link>
 
                 {/* Desktop nav links */}
-                <div className="hidden md:flex items-center gap-8">
+                <div className="hidden md:flex items-center gap-10">
                   <Link to="/" className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200">~/home</Link>
                   <Link to="/create" className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200">~/create</Link>
                   <Link to="/communities" className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200">~/communities</Link>
@@ -35,9 +35,9 @@ const Navbar = () => {
             </div>
 
             {/* Right side: Search + Auth */}
-            <div className="flex-1 flex items-center justify-end gap-8">
+            <div className="flex-1 flex items-center justify-end gap-10">
                 {/* Global Search (desktop) */}
-                <div className="hidden md:block w-full max-w-xs lg:max-w-md">
+                <div className="hidden md:block w-full max-w-xs lg:max-w-md ml-8">
                   <GlobalSearch />
                 </div>
 
