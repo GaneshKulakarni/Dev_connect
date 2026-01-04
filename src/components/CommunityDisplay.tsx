@@ -17,8 +17,8 @@ export const fetchCommunityPost = async (
   communityId: number
 ): Promise<PostWithCommunity[]> => {
   const { data, error } = await supabase
-    .from("Posts")
-    .select("*, Communities(name)")
+    .from("posts")
+    .select("*, communities(name)")
     .eq("community_id", communityId)
     .order("created_at", { ascending: false });
 
@@ -33,14 +33,7 @@ export const CommunityDisplay = ({ communityId }: Props) => {
   });
 
   if (isLoading)
-    return <div className="text-center py-4">Loading posts...</div>;
-  
-  if (error)
-    return (
-      <div className="text-center text-red-500 py-4">
-        Error fetching data: {error.message}
-      </div>
-    );
+    return <div className="text-center py-4 text-cyan-400 font-mono">Loading community feed...</div>;
   
   const communityName = data?.[0]?.communities?.name;
 
@@ -52,19 +45,24 @@ export const CommunityDisplay = ({ communityId }: Props) => {
             <span className="text-cyan-400">~/</span>{communityName ? communityName.toLowerCase().replace(/\s/g, '_') : 'community_feed'}
         </h2>
         <p className="text-gray-400 font-mono text-sm">
-            posts from this community
+            {communityName ? `welcome to the ${communityName.toLowerCase()} community` : 'posts from this community'}
         </p>
       </div>
 
+      {error && (
+        <div className="text-center text-red-500 py-4 font-mono">
+          Error fetching data: {error.message}
+        </div>
+      )}
+
       {data && data.length > 0 ? (
-        
         <div className="mx-auto flex flex-col gap-6">
           {data.map((post) => (
             <PostItem key={post.id} post={post} />
           ))}
         </div>
       ) : (
-        <div className="text-center text-gray-500 font-mono py-12">
+        <div className="text-center text-gray-500 font-mono py-12 border border-dashed border-cyan-900/30 rounded-lg bg-slate-900/20">
             No posts found in this community yet.
         </div>
       )}

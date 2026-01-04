@@ -171,6 +171,23 @@ CREATE TABLE Comments (
 );
 ```
 
+**Profiles Table**
+
+```sql
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  full_name TEXT,
+  username TEXT UNIQUE,
+  avatar_url TEXT,
+  bio TEXT,
+  github_url TEXT,
+  repos_count INT DEFAULT 0,
+  famous_repos JSONB DEFAULT '[]',
+  most_used_languages JSONB DEFAULT '[]',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
 **Communities Table**
 
 ```sql

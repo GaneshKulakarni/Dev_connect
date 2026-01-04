@@ -1,0 +1,351 @@
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "../supabase-client";
+import { Github, Book, Code, Star, ExternalLink, User, RefreshCw } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+
+interface FamousRepo {
+  name: string;
+  url: string;
+  stars: number;
+  description: string;
+}
+
+interface Profile {
+  id: string;
+  full_name: string;
+  username: string;
+  avatar_url: string;
+  bio: string;
+  github_url: string;
+  repos_count: number;
+  famous_repos: FamousRepo[];
+  most_used_languages: string[];
+}
+
+const DUMMY_PROFILES: Record<string, Profile> = {
+  sdras: {
+    id: "sdras",
+    full_name: "Sarah Drasner",
+    username: "sdras",
+    avatar_url: "https://github.com/sdras.png",
+    bio: "VP of Developer Experience at Netlify. Vue Core Team member.",
+    github_url: "https://github.com/sdras",
+    repos_count: 142,
+    famous_repos: [
+      { name: "intro-to-vue", url: "https://github.com/sdras/intro-to-vue", stars: 4500, description: "Intro to Vue.js Workshop" },
+      { name: "vue-sample-kanban", url: "https://github.com/sdras/vue-sample-kanban", stars: 1200, description: "A sample kanban board" }
+    ],
+    most_used_languages: ["Vue", "JavaScript", "CSS", "HTML"]
+  },
+  gaearon: {
+    id: "gaearon",
+    full_name: "Dan Abramov",
+    username: "gaearon",
+    avatar_url: "https://github.com/gaearon.png",
+    bio: "Working on React at Meta. Co-author of Redux and Create React App.",
+    github_url: "https://github.com/gaearon",
+    repos_count: 280,
+    famous_repos: [
+      { name: "redux", url: "https://github.com/reduxjs/redux", stars: 60000, description: "Predictable state container for JavaScript apps" },
+      { name: "react-hot-loader", url: "https://github.com/gaearon/react-hot-loader", stars: 12000, description: "Tweak React components in real time" }
+    ],
+    most_used_languages: ["JavaScript", "TypeScript", "React"]
+  },
+  addyosmani: {
+    id: "addyosmani",
+    full_name: "Addy Osmani",
+    username: "addyosmani",
+    avatar_url: "https://github.com/addyosmani.png",
+    bio: "Engineering Manager at Google working on Chrome. Author of Learning JavaScript Design Patterns.",
+    github_url: "https://github.com/addyosmani",
+    repos_count: 350,
+    famous_repos: [
+      { name: "critical", url: "https://github.com/addyosmani/critical", stars: 9500, description: "Extract & Inline Critical-path CSS in HTML pages" },
+      { name: "psi", url: "https://github.com/addyosmani/psi", stars: 3000, description: "PageSpeed Insights for Node" }
+    ],
+    most_used_languages: ["JavaScript", "HTML", "CSS"]
+  }
+};
+
+const fetchProfile = async (id: string): Promise<Profile> => {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      if (DUMMY_PROFILES[id]) return DUMMY_PROFILES[id];
+      throw new Error(error.message);
+    }
+    return data as Profile;
+  } catch (err) {
+    if (DUMMY_PROFILES[id]) return DUMMY_PROFILES[id];
+    throw err;
+  }
+};
+
+const ProfilePage = () => {
+  const { id } = useParams<{ id: string }>();
+  const { user, syncProfile } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const { data: profile, isLoading, error, refetch } = useQuery({
+    queryKey: ["profile", id],
+    queryFn: () => fetchProfile(id!),
+    enabled: !!id,
+    retry: 1,
+  });
+
+  const handleManualSync = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      await syncProfile(user);
+      await refetch();
+    } catch (err: any) {
+      console.error("Manual sync failed:", err);
+      alert(`Sync failed: ${err.message || "Unknown error"}. Check if the 'profiles' table exists in Supabase.`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  if (isLoading || isSyncing) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-cyan-400 font-mono text-xl animate-pulse">
+            {isSyncing ? "Syncing GitHub data..." : "Loading developer profile..."}
+          </div>
+          <div className="w-48 h-1 bg-cyan-900/30 rounded-full overflow-hidden">
+            <div className="h-full bg-cyan-500 animate-loading-bar"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    const isOwnProfile = user?.id === id;
+    const isTableMissing = error instanceof Error && error.message.includes("profiles") && error.message.includes("not found");
+    
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="bg-slate-900/50 border border-red-900/30 p-8 rounded-2xl max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+            <User className="text-red-500 w-8 h-8" />
+          </div>
+          
+          {isTableMissing ? (
+            <>
+              <h2 className="text-xl font-bold text-white mb-2 font-mono text-red-400">Database Table Missing</h2>
+              <p className="text-gray-400 font-mono text-sm mb-6 text-left">
+                The <code className="text-cyan-400 bg-slate-950 px-1 rounded">profiles</code> table hasn't been created in your Supabase project yet. 
+                <br /><br />
+                Please run the SQL schema found in the README to enable developer profiles.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-white mb-2 font-mono">Profile Sync Pending</h2>
+              <p className="text-gray-400 font-mono text-sm mb-6">
+                {isOwnProfile 
+                  ? "We're still fetching your GitHub data. This can take a few seconds on your first visit." 
+                  : "This developer profile hasn't been synced with GitHub yet."}
+              </p>
+            </>
+          )}
+
+          <div className="flex flex-col gap-3">
+            {isOwnProfile && !isTableMissing && (
+                <button 
+                    onClick={handleManualSync}
+                    className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-mono py-2.5 rounded-lg transition font-bold"
+                >
+                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    Sync My Profile Now
+                </button>
+            )}
+            <button 
+                onClick={() => refetch()}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-gray-300 font-mono py-2 rounded-lg transition text-sm"
+            >
+                Try Refreshing
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwnProfile = user?.id === id;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-gray-200 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Profile Header */}
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 mb-8 backdrop-blur-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+            <User size={120} />
+          </div>
+          
+          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+            <div className="relative">
+              <img 
+                src={profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.full_name}&background=0D9488&color=fff`} 
+                alt={profile.full_name} 
+                className="w-32 h-32 rounded-full ring-4 ring-cyan-900/50 object-cover"
+              />
+              <div className="absolute -bottom-2 -right-2 bg-slate-900 p-2 rounded-full border border-slate-700">
+                <Github className="text-cyan-400 w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex flex-col md:flex-row md:items-center gap-4 mb-2">
+                <h1 className="text-4xl font-bold text-white font-mono">
+                    {profile.full_name}
+                </h1>
+                {isOwnProfile && (
+                    <button 
+                        onClick={handleManualSync}
+                        className="inline-flex items-center gap-2 text-xs bg-cyan-950/50 text-cyan-400 hover:bg-cyan-900/50 px-2 py-1 rounded border border-cyan-900/30 transition w-fit"
+                        title="Force sync from GitHub"
+                    >
+                        <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                        Sync Data
+                    </button>
+                )}
+              </div>
+              <p className="text-cyan-400 font-mono mb-4 text-lg">@{profile.username}</p>
+              <p className="text-gray-400 max-w-2xl leading-relaxed mb-6 italic">
+                "{profile.bio || 'This developer is too busy coding to write a bio.'}"
+              </p>
+              
+              <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                <a 
+                  href={profile.github_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition border border-slate-700 group"
+                >
+                  <ExternalLink className="w-4 h-4 group-hover:text-cyan-400" />
+                  <span>GitHub Profile</span>
+                </a>
+                <div className="flex items-center gap-2 bg-cyan-950/30 text-cyan-400 px-4 py-2 rounded-lg border border-cyan-900/30">
+                  <Book className="w-4 h-4" />
+                  <span>{profile.repos_count} Repositories</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Main Content: Repos */}
+          <div className="md:col-span-2 space-y-8">
+            <section>
+              <div className="flex items-center gap-2 text-cyan-400 font-mono mb-6 uppercase tracking-widest text-sm">
+                <Star className="w-4 h-4" />
+                <span>Featured Projects</span>
+              </div>
+              
+              <div className="grid gap-4">
+                {profile.famous_repos && profile.famous_repos.length > 0 ? (
+                  profile.famous_repos.map((repo, idx) => (
+                    <a 
+                      key={idx}
+                      href={repo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-slate-900/40 border border-slate-800 p-6 rounded-xl hover:border-cyan-900/50 hover:bg-slate-900/60 transition group"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition font-mono">
+                          {repo.name}
+                        </h3>
+                        <div className="flex items-center gap-1 text-yellow-500 text-sm">
+                          <Star className="w-4 h-4 fill-yellow-500" />
+                          <span>{repo.stars}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                        {repo.description || 'No description provided for this repository.'}
+                      </p>
+                      <div className="flex items-center text-cyan-500 text-xs font-mono">
+                        <span>view_repository();</span>
+                      </div>
+                    </a>
+                  ))
+                ) : (
+                  <div className="text-gray-500 font-mono italic p-8 border border-dashed border-slate-800 rounded-xl text-center">
+                    No public repositories highlighted.
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Sidebar: Languages & Tech */}
+          <div className="space-y-8">
+            <section>
+              <div className="flex items-center gap-2 text-cyan-400 font-mono mb-6 uppercase tracking-widest text-sm">
+                <Code className="w-4 h-4" />
+                <span>Top Languages</span>
+              </div>
+              <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-xl">
+                <div className="flex flex-wrap gap-2">
+                  {profile.most_used_languages && profile.most_used_languages.length > 0 ? (
+                    profile.most_used_languages.map((lang, idx) => (
+                      <span 
+                        key={idx}
+                        className="bg-slate-800 text-gray-300 px-3 py-1.5 rounded-md text-sm font-mono border border-slate-700"
+                      >
+                        {lang}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm italic">Data unavailable</span>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center gap-2 text-cyan-400 font-mono mb-6 uppercase tracking-widest text-sm">
+                <Github className="w-4 h-4" />
+                <span>Quick Links</span>
+              </div>
+              <div className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden">
+                <a 
+                  href={`https://github.com/${profile.username}?tab=repositories`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 hover:bg-slate-800 transition text-sm group"
+                >
+                  <span className="text-gray-300">All Repositories</span>
+                  <ExternalLink className="w-4 h-4 text-gray-500 group-hover:text-cyan-400" />
+                </a>
+                <a 
+                  href={`https://github.com/${profile.username}?tab=stars`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 hover:bg-slate-800 border-t border-slate-800 transition text-sm group"
+                >
+                  <span className="text-gray-300">Starred Projects</span>
+                  <ExternalLink className="w-4 h-4 text-gray-500 group-hover:text-cyan-400" />
+                </a>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProfilePage;

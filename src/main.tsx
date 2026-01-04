@@ -10,7 +10,7 @@ const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
 
-    <Router>
+    <Router basename="/DevConnect">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
         <App />
