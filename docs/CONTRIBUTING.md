@@ -6,10 +6,10 @@ This guide explains how to get started, follow best practices, and submit high�
 ---
 
 ## Quick Links
-- [Setup Guide](SETUP.md) – Development environment setup  
-- [Architecture](ARCHITECTURE.md) – System overview  
-- [Database Schema](DATABASE.md) – Database documentation  
-- [Code of Conduct](CODE_OF_CONDUCT.md
+- [Setup Guide](docs/SETUP.md) – Development environment setup  
+- [Architecture](docs/ARCHITECTURE.md) – System overview  
+- [Database Schema](docs/DATABASE.md) – Database documentation  
+- [Code of Conduct](docs/CODE_OF_CONDUCT.md
 ) – Community guidelines  
 
 ---
