@@ -1,17 +1,24 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useEffect, useState } from "react";
 import { type User, AuthError } from "@supabase/supabase-js";
-import { supabase } from "../supabase-client";
+import { supabase, isBackendAvailable } from "../supabase-client";
 
 interface AuthContextType {
-    user: User | null;
-    loading: boolean;
-    signInWithGithub: () => Promise<void>;
-    signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-    signUpWithEmail: (email: string, password: string, metadata?: { full_name?: string }) => Promise<{ error: AuthError | null }>;
-    signOut: () => Promise<void>;
-    resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
-    updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
+  user: User | null;
+  loading: boolean;
+  signInWithGithub: () => Promise<void>;
+  signInWithEmail: (
+    email: string,
+    password: string
+  ) => Promise<{ error: AuthError | null }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    metadata?: { full_name?: string }
+  ) => Promise<{ error: AuthError | null }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,16 +28,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and subscribe to auth changes
+    // ✅ DEMO MODE / NO BACKEND
+    if (!isBackendAvailable || !supabase) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Normal Supabase flow
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
 
     return () => {
       listener.subscription.unsubscribe();
@@ -38,16 +54,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signInWithGithub = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ 
+    if (!isBackendAvailable || !supabase) {
+      throw new Error("Authentication is disabled in demo mode");
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: window.location.origin
-      }
+        redirectTo: window.location.origin,
+      },
     });
     if (error) throw error;
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (!isBackendAvailable || !supabase) {
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -55,7 +79,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error };
   };
 
-  const signUpWithEmail = async (email: string, password: string, metadata?: { full_name?: string }) => {
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    metadata?: { full_name?: string }
+  ) => {
+    if (!isBackendAvailable || !supabase) {
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -68,11 +100,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (!isBackendAvailable || !supabase) return;
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
 
   const resetPassword = async (email: string) => {
+    if (!isBackendAvailable || !supabase) {
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -80,23 +118,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updatePassword = async (password: string) => {
+    if (!isBackendAvailable || !supabase) {
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.updateUser({
-      password: password,
+      password,
     });
     return { error };
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading,
-      signInWithGithub, 
-      signInWithEmail,
-      signUpWithEmail,
-      signOut,
-      resetPassword,
-      updatePassword
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signInWithGithub,
+        signInWithEmail,
+        signUpWithEmail,
+        signOut,
+        resetPassword,
+        updatePassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
