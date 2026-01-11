@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { useAuth } from '../context/AuthContext';
-import type {
-  Message,
-  ConversationWithDetails,
-  CreateConversationData,
+import { useAuth } from '../hooks/useAuth';
+import type { 
+  Message, 
+  ConversationWithDetails, 
+  CreateConversationData, 
   SendMessageData,
   UserPresence,
   TypingIndicator
@@ -14,12 +14,12 @@ import type {
 // Hook for fetching conversations
 export const useConversations = () => {
   const { user } = useAuth();
-
+  
   return useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
       if (!user) return [];
-
+      
       const { data, error } = await supabase
         .from('Conversations')
         .select(`
@@ -34,7 +34,7 @@ export const useConversations = () => {
           )
         `)
         .order('updated_at', { ascending: false });
-
+      
       if (error) throw error;
       return data as ConversationWithDetails[];
     },
@@ -45,7 +45,7 @@ export const useConversations = () => {
 // Hook for fetching messages in a conversation
 export const useMessages = (conversationId: number) => {
   const { user } = useAuth();
-
+  
   return useQuery({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
@@ -66,7 +66,7 @@ export const useMessages = (conversationId: number) => {
         .eq('conversation_id', conversationId)
         .eq('is_deleted', false)
         .order('created_at', { ascending: true });
-
+      
       if (error) throw error;
       return data as Message[];
     },
@@ -78,11 +78,11 @@ export const useMessages = (conversationId: number) => {
 export const useCreateConversation = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
+  
   return useMutation({
     mutationFn: async (data: CreateConversationData) => {
       if (!user) throw new Error('User not authenticated');
-
+      
       // Create conversation
       const { data: conversation, error: convError } = await supabase
         .from('Conversations')
@@ -95,9 +95,9 @@ export const useCreateConversation = () => {
         })
         .select()
         .single();
-
+      
       if (convError) throw convError;
-
+      
       // Add participants
       const participants = [
         { conversation_id: conversation.id, user_id: user.id, role: 'admin' },
@@ -107,13 +107,13 @@ export const useCreateConversation = () => {
           role: 'member' as const
         }))
       ];
-
+      
       const { error: partError } = await supabase
         .from('ConversationParticipants')
         .insert(participants);
-
+      
       if (partError) throw partError;
-
+      
       return conversation;
     },
     onSuccess: () => {
@@ -126,11 +126,11 @@ export const useCreateConversation = () => {
 export const useSendMessage = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
+  
   return useMutation({
     mutationFn: async (data: SendMessageData) => {
       if (!user) throw new Error('User not authenticated');
-
+      
       const { data: message, error } = await supabase
         .from('Messages')
         .insert({
@@ -147,7 +147,7 @@ export const useSendMessage = () => {
           sender:auth.users(id, email, user_metadata)
         `)
         .single();
-
+      
       if (error) throw error;
       return message;
     },
@@ -162,10 +162,10 @@ export const useSendMessage = () => {
 export const useRealtimeMessages = (conversationId: number) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
+  
   useEffect(() => {
     if (!user || !conversationId) return;
-
+    
     const channel = supabase
       .channel(`messages:${conversationId}`)
       .on(
@@ -194,7 +194,7 @@ export const useRealtimeMessages = (conversationId: number) => {
         }
       )
       .subscribe();
-
+    
     return () => {
       supabase.removeChannel(channel);
     };
@@ -205,10 +205,10 @@ export const useRealtimeMessages = (conversationId: number) => {
 export const useUserPresence = () => {
   const { user } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState<UserPresence[]>([]);
-
+  
   useEffect(() => {
     if (!user) return;
-
+    
     // Update user status to online
     const updatePresence = async () => {
       await supabase
@@ -219,9 +219,9 @@ export const useUserPresence = () => {
           last_seen: new Date().toISOString(),
         });
     };
-
+    
     updatePresence();
-
+    
     // Set up real-time subscription for presence updates
     const channel = supabase
       .channel('user-presence')
@@ -238,21 +238,21 @@ export const useUserPresence = () => {
         }
       )
       .subscribe();
-
+    
     const fetchPresence = async () => {
       const { data } = await supabase
         .from('UserPresence')
         .select('*')
         .eq('status', 'online');
-
+      
       if (data) setOnlineUsers(data);
     };
-
+    
     fetchPresence();
-
+    
     // Update presence every 30 seconds
     const interval = setInterval(updatePresence, 30000);
-
+    
     // Set status to offline on unmount
     return () => {
       clearInterval(interval);
@@ -263,7 +263,7 @@ export const useUserPresence = () => {
         .eq('user_id', user.id);
     };
   }, [user]);
-
+  
   return onlineUsers;
 };
 
@@ -271,10 +271,10 @@ export const useUserPresence = () => {
 export const useTypingIndicator = (conversationId: number) => {
   const { user } = useAuth();
   const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
-
+  
   const startTyping = async () => {
     if (!user || !conversationId) return;
-
+    
     await supabase
       .from('TypingIndicators')
       .upsert({
@@ -282,20 +282,20 @@ export const useTypingIndicator = (conversationId: number) => {
         user_id: user.id,
       });
   };
-
+  
   const stopTyping = async () => {
     if (!user || !conversationId) return;
-
+    
     await supabase
       .from('TypingIndicators')
       .delete()
       .eq('conversation_id', conversationId)
       .eq('user_id', user.id);
   };
-
+  
   useEffect(() => {
     if (!conversationId) return;
-
+    
     const channel = supabase
       .channel(`typing:${conversationId}`)
       .on(
@@ -315,17 +315,17 @@ export const useTypingIndicator = (conversationId: number) => {
             `)
             .eq('conversation_id', conversationId)
             .neq('user_id', user?.id || '');
-
+          
           if (data) setTypingUsers(data);
         }
       )
       .subscribe();
-
+    
     return () => {
       supabase.removeChannel(channel);
     };
   }, [conversationId, user]);
-
+  
   return { typingUsers, startTyping, stopTyping };
 };
 
@@ -333,11 +333,11 @@ export const useTypingIndicator = (conversationId: number) => {
 export const useMessageReactions = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
+  
   const addReaction = useMutation({
     mutationFn: async ({ messageId, emoji }: { messageId: number; emoji: string }) => {
       if (!user) throw new Error('User not authenticated');
-
+      
       const { error } = await supabase
         .from('MessageReactions')
         .upsert({
@@ -345,32 +345,32 @@ export const useMessageReactions = () => {
           user_id: user.id,
           emoji,
         });
-
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      // Invalidate messages queries to refresh reactions
+      // Get conversation_id from the message to invalidate the right query
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
-
+  
   const removeReaction = useMutation({
     mutationFn: async ({ messageId, emoji }: { messageId: number; emoji: string }) => {
       if (!user) throw new Error('User not authenticated');
-
+      
       const { error } = await supabase
         .from('MessageReactions')
         .delete()
         .eq('message_id', messageId)
         .eq('user_id', user.id)
         .eq('emoji', emoji);
-
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
-
+  
   return { addReaction, removeReaction };
 };

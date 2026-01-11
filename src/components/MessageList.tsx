@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useMessageReactions } from '../hooks/useMessaging';
 import { Reply, Edit, Trash2, Download, ExternalLink } from 'lucide-react';
 import type { Message } from '../types/messaging';
@@ -261,7 +261,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                         😊
                       </button>
                       <button
-                        onClick={() => setReplyingTo(message)}
+                        onClick={() => console.log('Reply to:', message)}
                         className="p-1 hover:bg-slate-700 rounded text-gray-400 hover:text-white transition"
                         title="Reply"
                       >

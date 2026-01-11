@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { supabase } from '../supabase-client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 interface Props {
     postId: number;
@@ -18,7 +18,7 @@ interface Vote {
 
 const like = async (likeValue: number, postId: number, userId: string) => {
     const { data: existingVote } = await supabase
-        .from('votes')
+        .from('Votes')
         .select("*")
         .eq("post_id", postId)
         .eq("user_id", userId)
@@ -28,7 +28,7 @@ const like = async (likeValue: number, postId: number, userId: string) => {
         if (existingVote.vote === likeValue) {
             // User is unliking the post
             const { error } = await supabase
-                .from('votes')
+                .from('Votes')
                 .delete()
                 .eq("post_id", postId)
                 .eq("user_id", userId);
@@ -38,7 +38,7 @@ const like = async (likeValue: number, postId: number, userId: string) => {
         }
     } else {
         const { error } = await supabase
-            .from('votes')
+            .from('Votes')
             .insert({ post_id: postId, user_id: userId, vote: likeValue });
         
         if (error) {
@@ -49,7 +49,7 @@ const like = async (likeValue: number, postId: number, userId: string) => {
 
 const fetchLikes = async (postId: number): Promise<Vote[]> => {
     const { data, error } = await supabase
-        .from('votes')
+        .from('Votes')
         .select('*')
         .eq('post_id', postId);
     if (error) {
@@ -83,7 +83,7 @@ const LikeButton = ({ postId, onLikeCountChange }: Props) => {
     const likeCount = votes ? votes.filter(vote => vote.vote === 1).length : 0;
     const userVote = votes?.find(vote => vote.user_id === user?.id)?.vote || 0;
 
-    // Update parent component with like count
+    // Update parent component with like count using useEffect to avoid re-render loops
     useEffect(() => {
         if (onLikeCountChange && votes) {
             onLikeCountChange(likeCount);
