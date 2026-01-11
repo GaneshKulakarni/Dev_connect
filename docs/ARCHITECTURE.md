@@ -42,7 +42,15 @@
 3. User clicks **Edit Profile** button
 4. Form allows updating bio, location, website, social links, and avatar
 5. Image upload handled via file input with preview
-6. Updated data saved to **Profiles** table with RLS validation  
+6. Updated data saved to **Profiles** table with RLS validation
+
+### Dashboard & Real-time Activity Flow
+1. User navigates to **Dashboard** page
+2. Dashboard fetches user's recent activity from multiple tables (Posts, Comments, Votes, CommunityMembers)
+3. Real-time subscriptions monitor for new activities
+4. Activity feed updates automatically when new events occur
+5. Supabase real-time channels push updates to the dashboard
+6. Query invalidation refreshes the activity feed with new data  
 
 ---
 

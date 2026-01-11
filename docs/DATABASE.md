@@ -271,6 +271,34 @@ CREATE TABLE PostImages (
 CREATE INDEX idx_postimages_post ON PostImages(post_id);
 ```
 
+### CommunityMembers Table
+Tracks user membership in communities.
+
+```sql
+CREATE TABLE CommunityMembers (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  community_id BIGINT NOT NULL REFERENCES Communities(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member' CHECK (role IN ('member', 'admin', 'moderator')),
+  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT true,
+
+  UNIQUE(community_id, user_id)
+);
+
+CREATE INDEX idx_community_members_community ON CommunityMembers(community_id);
+CREATE INDEX idx_community_members_user ON CommunityMembers(user_id);
+CREATE INDEX idx_community_members_role ON CommunityMembers(role);
+```
+
+**Purpose:** Manages user membership in communities with roles and join dates.
+
+**Relationships:**
+- `community_id → Communities(id)` (1 community → many members)
+- `user_id → auth.users(id)` (1 user → many communities)
+
+**Row Level Security:** Users can only view and manage their own community memberships.
+
 ---
 
 ## Row Level Security (RLS)

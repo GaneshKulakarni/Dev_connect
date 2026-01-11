@@ -63,6 +63,7 @@ DevConnect is a full-stack web application that enables developers to:
 - 👤 **Profile Dashboard** - View user details, email, account info, and manage sessions
 - ✏️ **Profile Editing** - Update profile information including bio, location, website, and social links (GitHub, Twitter)
 - 🖼️ **Avatar Upload** - Upload custom profile pictures with real-time preview
+- 📊 **Real-time Dashboard** - Monitor your activity with live-updating dashboard and recent activity feed
 - 💬 **Nested Comments** - Multi-level comment threads with collapse/expand
 - 👥 **Communities** - Create and manage developer communities
 - ❤️ **Likes System** - Vote on posts and comments

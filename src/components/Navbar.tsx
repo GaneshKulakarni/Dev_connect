@@ -3,11 +3,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { Code2, Menu, X, MessageSquare, Calendar, Sun, Moon } from 'lucide-react';
+import { Code2, Menu, X, MessageSquare, Calendar, Sun, Moon, User, Settings, LogOut } from 'lucide-react';
 import MessageNotificationBadge from './MessageNotificationBadge';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
     const { signOut, user } = useAuth();
 
@@ -57,8 +58,11 @@ const Navbar = () => {
                     )}
                 </button>
                 {user ? (
-                    <>
-                        <Link to="/profile" className="font-mono text-sm text-cyan-300 hover:text-cyan-400 transition flex items-center gap-2">
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm transition"
+                        >
                             {user?.user_metadata?.avatar_url && (
                                 <img 
                                     src={user.user_metadata.avatar_url}
@@ -66,15 +70,42 @@ const Navbar = () => {
                                     className="w-6 h-6 rounded-full ring-2 ring-cyan-400/50"
                                 />
                             )}
-                            {displayName}
-                        </Link>
-                        <button 
-                            onClick={signOut} 
-                            className="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 border border-red-500/50 rounded-lg text-red-300 font-mono text-sm transition"
-                        >
-                            logout
+                            <span>{displayName}</span>
                         </button>
-                    </>
+                        
+                        {isUserMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50">
+                                <div className="p-2">
+                                    <Link 
+                                        to="/profile"
+                                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-slate-700 rounded-lg transition"
+                                        onClick={() => setIsUserMenuOpen(false)}
+                                    >
+                                        <User className="w-4 h-4" />
+                                        My Profile
+                                    </Link>
+                                    <Link 
+                                        to="/dashboard"
+                                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-slate-700 rounded-lg transition"
+                                        onClick={() => setIsUserMenuOpen(false)}
+                                    >
+                                        <Settings className="w-4 h-4" />
+                                        Dashboard
+                                    </Link>
+                                    <button 
+                                        onClick={() => {
+                                            signOut();
+                                            setIsUserMenuOpen(false);
+                                        }}
+                                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-300 hover:bg-slate-700 rounded-lg transition"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 ) : (   
                     <>
                         <Link 
@@ -147,10 +178,11 @@ const Navbar = () => {
                 )}
               </button>
               {user ? (
-                <>
+                <div className="space-y-2">
                   <Link 
                     to="/profile"
                     className="w-full flex items-center gap-3 px-4 py-2 bg-cyan-900/30 hover:bg-cyan-900/50 border border-cyan-400/50 rounded-lg text-cyan-300 font-mono text-sm transition"
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     {user?.user_metadata?.avatar_url && (
                       <img
@@ -161,13 +193,24 @@ const Navbar = () => {
                     )}
                     {displayName}
                   </Link>
+                  <Link 
+                    to="/dashboard"
+                    className="w-full flex items-center gap-3 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm transition"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Dashboard
+                  </Link>
                   <button 
-                    onClick={signOut} 
+                    onClick={() => {
+                      signOut();
+                      setIsMenuOpen(false);
+                    }}
                     className="w-full px-4 py-2 bg-red-900/20 hover:bg-red-900/40 border border-red-500/50 rounded-lg text-red-300 font-mono text-sm transition"
                   >
                     logout
                   </button>
-                </>
+                </div>
               ) : (
                 <>
                   <Link 
