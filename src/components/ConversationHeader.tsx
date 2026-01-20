@@ -13,16 +13,13 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
 
   const getConversationName = () => {
     if (conversation.name) return conversation.name;
-    
+
     // For direct messages, show the other participant's name
     const otherParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
-    if (otherParticipant) {
-      return otherParticipant.user?.user_metadata?.full_name || 
-             otherParticipant.user?.user_metadata?.user_name || 
-             otherParticipant.user?.email || 
-             'Unknown User';
-    }
-    return 'Unknown User';
+    return otherParticipant?.user?.user_metadata?.full_name ||
+      otherParticipant?.user?.user_metadata?.user_name ||
+      otherParticipant?.user?.email ||
+      'Unknown User';
   };
 
   const getConversationStatus = () => {
@@ -30,13 +27,9 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
       const memberCount = conversation.participants?.length || 0;
       return `${memberCount} members`;
     }
-    
+
     // For direct messages, show online status
-    const otherParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
-    if (otherParticipant) {
-      return 'Online'; // This would be dynamic based on presence
-    }
-    return 'Offline';
+    return 'Online'; // This would be dynamic based on presence
   };
 
   const getConversationAvatar = () => {
@@ -47,7 +40,7 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
         </div>
       );
     }
-    
+
     // For direct messages, show the other participant's avatar
     const otherParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
     if (otherParticipant?.user?.user_metadata?.avatar_url) {
@@ -62,15 +55,15 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
           <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full" />
         </div>
       );
-    } else if (otherParticipant) {
-      return (
-        <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
-          <span className="text-sm text-gray-300">
-            {getConversationName()[0]?.toUpperCase()}
-          </span>
-        </div>
-      );
     }
+
+    return (
+      <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
+        <span className="text-sm text-gray-300">
+          {getConversationName()[0]?.toUpperCase()}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -79,7 +72,7 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
         {/* Left Side - Conversation Info */}
         <div className="flex items-center gap-3">
           {getConversationAvatar()}
-          
+
           <div>
             <h2 className="font-semibold text-white">{getConversationName()}</h2>
             <p className="text-sm text-gray-400">{getConversationStatus()}</p>
@@ -153,7 +146,7 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
                       Conversation Settings
                     </div>
                   </button>
-                  
+
                   {conversation.type === 'group' && (
                     <>
                       <button className="w-full px-4 py-2 text-left text-gray-300 hover:bg-slate-800 hover:text-white transition">
@@ -162,7 +155,7 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
                           Manage Members
                         </div>
                       </button>
-                      
+
                       <button className="w-full px-4 py-2 text-left text-gray-300 hover:bg-slate-800 hover:text-white transition">
                         <div className="flex items-center gap-3">
                           <Pin className="w-4 h-4" />
@@ -171,9 +164,9 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
                       </button>
                     </>
                   )}
-                  
+
                   <div className="border-t border-slate-700 my-1" />
-                  
+
                   <button className="w-full px-4 py-2 text-left text-red-400 hover:bg-slate-800 transition">
                     {conversation.type === 'group' ? 'Leave Group' : 'Block User'}
                   </button>
@@ -198,13 +191,13 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
                     title={participant.user.user_metadata.full_name || participant.user.user_metadata.user_name}
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-6 h-6 bg-slate-600 rounded-full ring-2 ring-slate-900 flex items-center justify-center"
                     title={participant.user?.user_metadata?.full_name || participant.user?.user_metadata?.user_name}
                   >
                     <span className="text-xs text-gray-300">
-                      {participant.user?.user_metadata?.full_name?.[0] || 
-                       participant.user?.user_metadata?.user_name?.[0] || '?'}
+                      {participant.user?.user_metadata?.full_name?.[0] ||
+                        participant.user?.user_metadata?.user_name?.[0] || '?'}
                     </span>
                   </div>
                 )}
@@ -216,7 +209,7 @@ const ConversationHeader = ({ conversation }: ConversationHeaderProps) => {
               </div>
             )}
           </div>
-          
+
           <span className="text-xs text-gray-400 ml-2">
             {conversation.participants.length} members
           </span>

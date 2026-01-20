@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { supabase } from '../supabase-client';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +18,7 @@ interface Vote {
 
 const like = async (likeValue: number, postId: number, userId: string) => {
     const { data: existingVote } = await supabase
-        .from('votes')
+        .from('Votes')
         .select("*")
         .eq("post_id", postId)
         .eq("user_id", userId)
@@ -28,7 +28,7 @@ const like = async (likeValue: number, postId: number, userId: string) => {
         if (existingVote.vote === likeValue) {
             // User is unliking the post
             const { error } = await supabase
-                .from('votes')
+                .from('Votes')
                 .delete()
                 .eq("post_id", postId)
                 .eq("user_id", userId);
@@ -38,9 +38,9 @@ const like = async (likeValue: number, postId: number, userId: string) => {
         }
     } else {
         const { error } = await supabase
-            .from('votes')
+            .from('Votes')
             .insert({ post_id: postId, user_id: userId, vote: likeValue });
-        
+
         if (error) {
             throw new Error("Error liking post: " + error.message);
         }
@@ -49,7 +49,7 @@ const like = async (likeValue: number, postId: number, userId: string) => {
 
 const fetchLikes = async (postId: number): Promise<Vote[]> => {
     const { data, error } = await supabase
-        .from('votes')
+        .from('Votes')
         .select('*')
         .eq('post_id', postId);
     if (error) {
@@ -61,9 +61,9 @@ const fetchLikes = async (postId: number): Promise<Vote[]> => {
 const LikeButton = ({ postId, onLikeCountChange }: Props) => {
     const { user } = useAuth();
     const queryClient = useQueryClient();
-    
+
     const { data: votes, isLoading } = useQuery({
-        queryKey: ['votes', postId], 
+        queryKey: ['votes', postId],
         queryFn: () => fetchLikes(postId),
         refetchInterval: 5000,
     });
@@ -83,7 +83,7 @@ const LikeButton = ({ postId, onLikeCountChange }: Props) => {
     const likeCount = votes ? votes.filter(vote => vote.vote === 1).length : 0;
     const userVote = votes?.find(vote => vote.user_id === user?.id)?.vote || 0;
 
-    // Update parent component with like count
+    // Update parent component with like count using useEffect to avoid re-render loops
     useEffect(() => {
         if (onLikeCountChange && votes) {
             onLikeCountChange(likeCount);
@@ -102,8 +102,8 @@ const LikeButton = ({ postId, onLikeCountChange }: Props) => {
 
     return (
         <div>
-            <button 
-                className="flex items-center gap-1 transition-all hover:scale-110" 
+            <button
+                className="flex items-center gap-1 transition-all hover:scale-110"
                 onClick={() => {
                     if (!user) {
                         alert("Please log in to like posts");
@@ -112,12 +112,11 @@ const LikeButton = ({ postId, onLikeCountChange }: Props) => {
                     mutate(1);
                 }}
             >
-                <Heart 
-                    className={`w-6 h-6 transition-colors ${
-                        userVote === 1 
-                            ? 'fill-red-500 text-red-500' 
+                <Heart
+                    className={`w-6 h-6 transition-colors ${userVote === 1
+                            ? 'fill-red-500 text-red-500'
                             : 'text-gray-900 hover:text-red-500'
-                    }`}
+                        }`}
                 />
             </button>
         </div>

@@ -39,7 +39,7 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
       try {
         const { data, error } = await supabase.auth.admin.listUsers();
         if (error) throw error;
-        
+
         // Filter out current user
         const filteredUsers = data.users.filter(u => u.id !== currentUser?.id);
         setUsers(filteredUsers as User[]);
@@ -57,10 +57,10 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
     const fullName = user.user_metadata?.full_name?.toLowerCase() || '';
     const userName = user.user_metadata?.user_name?.toLowerCase() || '';
     const email = user.email.toLowerCase();
-    
-    return fullName.includes(searchLower) || 
-           userName.includes(searchLower) || 
-           email.includes(searchLower);
+
+    return fullName.includes(searchLower) ||
+      userName.includes(searchLower) ||
+      email.includes(searchLower);
   });
 
   const handleUserSelect = (user: User) => {
@@ -80,14 +80,14 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
 
   const handleCreate = async () => {
     if (selectedUsers.length === 0) return;
-    
+
     if (conversationType === 'group' && !groupName.trim()) {
       alert('Please enter a group name');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       const conversationData = {
         type: conversationType,
@@ -108,9 +108,9 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
   };
 
   const getUserDisplayName = (user: User) => {
-    return user.user_metadata?.full_name || 
-           user.user_metadata?.user_name || 
-           user.email;
+    return user.user_metadata?.full_name ||
+      user.user_metadata?.user_name ||
+      user.email;
   };
 
   return (
@@ -185,7 +185,7 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
                   className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/50"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
                   Description (optional)
@@ -198,7 +198,7 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
                   className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/50 resize-none"
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -268,7 +268,7 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
             <div className="max-h-48 overflow-y-auto space-y-1">
               {filteredUsers.map(user => {
                 const isSelected = selectedUsers.some(u => u.id === user.id);
-                
+
                 return (
                   <div
                     key={user.id}
@@ -294,21 +294,21 @@ const CreateConversationModal = ({ onClose, onConversationCreated }: CreateConve
                         </span>
                       </div>
                     )}
-                    
+
                     <div className="flex-1">
                       <p className="text-white font-medium">
                         {getUserDisplayName(user)}
                       </p>
                       <p className="text-sm text-gray-400">{user.email}</p>
                     </div>
-                    
+
                     {isSelected && (
                       <Check className="w-5 h-5 text-cyan-400" />
                     )}
                   </div>
                 );
               })}
-              
+
               {filteredUsers.length === 0 && (
                 <div className="text-center py-4 text-gray-400">
                   No users found

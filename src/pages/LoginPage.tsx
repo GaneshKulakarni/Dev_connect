@@ -1,112 +1,163 @@
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { Github, Mail, Lock, Loader2, Code2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { useNavigate, Link } from "react-router";
+import { Github } from "lucide-react";
 
-const LoginPage = () => {
-  const { signInWithGithub, signInWithEmail } = useAuth();
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const { signInWithEmail, signInWithGithub } = useAuth();
   const navigate = useNavigate();
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    setLoading(true);
+
     try {
-      await signInWithEmail(email, password);
-      navigate("/");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      const { error } = await signInWithEmail(email, password);
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          setError(
+            "Please verify your email address before signing in. Check your inbox."
+          );
+        } else if (error.message.includes("Invalid login credentials")) {
+          setError("Invalid email or password. Please try again.");
+        } else {
+          setError(error.message);
+        }
+      } else {
+        navigate("/");
+      }
+    } catch {
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGithubLogin = async () => {
+    setError("");
+    try {
+      await signInWithGithub();
+    } catch {
+      setError("Failed to sign in with GitHub");
+    }
+  };
+
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 bg-slate-950">
-      <div className="w-full max-w-md">
-        <div className="bg-slate-900/50 border border-cyan-900/30 rounded-2xl p-8 backdrop-blur-sm shadow-2xl">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-4 border border-cyan-500/20">
-              <Code2 className="w-7 h-7 text-cyan-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-white font-mono">Welcome to DevConnect</h1>
-            <p className="text-gray-400 text-sm mt-2 font-mono">Authentication Required</p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm font-mono">
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={signInWithGithub}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-black font-semibold py-3 px-4 rounded-lg transition duration-200 mb-6"
-          >
-            <Github className="w-5 h-5" />
-            Continue with GitHub
-          </button>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-cyan-900/30"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-slate-900 px-2 text-gray-500 font-mono">Or use credentials</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-mono text-gray-400 mb-1">GitHub Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="dev@github.com"
-                  className="w-full bg-slate-950 border border-cyan-900/30 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 font-mono text-sm"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-mono text-gray-400 mb-1">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-cyan-900/30 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 font-mono text-sm"
-                  required
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2 mt-4"
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold">
+            Sign in to DevConnect
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-500">
+            Or{" "}
+            <Link
+              to="/register"
+              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-500"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
-            </button>
-          </form>
-
-          <p className="mt-8 text-center text-xs text-gray-500 font-mono">
-            Secure connection via Supabase Auth
+              create a new account
+            </Link>
           </p>
         </div>
+
+        {error && (
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+            <p className="text-sm text-red-800 dark:text-red-500">{error}</p>
+          </div>
+        )}
+
+        <button
+          onClick={handleGithubLogin}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3
+                     border border-gray-300 dark:border-gray-600 rounded-md
+                     bg-white dark:bg-gray-800
+                     text-sm font-medium text-gray-800 dark:text-gray-200
+                     hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <Github className="w-5 h-5" />
+          Continue with GitHub
+        </button>
+
+        {/* Divider – same as Register */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700" />
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-500 whitespace-nowrap">
+            Or continue with email
+          </span>
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700" />
+        </div>
+
+        {/* Email form */}
+        <form
+          onSubmit={handleEmailLogin}
+          className="space-y-4 [&_input]:!text-white [&_input]:caret-white"
+        >
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-2">
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="block w-full px-3 py-2 rounded-md
+                         border border-gray-300 dark:border-gray-600
+                         bg-gray-900 dark:bg-gray-800
+                         placeholder-gray-400
+                         focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="block w-full px-3 py-2 rounded-md
+                         border border-gray-300 dark:border-gray-600
+                         bg-gray-900 dark:bg-gray-800
+                         placeholder-gray-400
+                         focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="text-sm text-right">
+            <Link
+              to="/forgot-password"
+              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-500"
+            >
+              Forgot your password?
+            </Link>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-4 rounded-md
+                       text-sm font-medium text-white
+                       bg-blue-600 hover:bg-blue-700
+                       focus:outline-none focus:ring-2 focus:ring-blue-500
+                       disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}

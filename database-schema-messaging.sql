@@ -1,5 +1,55 @@
--- Real-time Messaging System Database Schema
+-- DevConnect Database Schema
+-- Includes messaging system and user profiles
 -- Add these tables to your Supabase database
+
+-- User profiles table for extended user information
+CREATE TABLE Profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL PRIMARY KEY,
+  full_name TEXT,
+  bio TEXT,
+  location TEXT,
+  website TEXT,
+  github TEXT,
+  twitter TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_profiles_full_name 
+ON Profiles USING gin(full_name gin_trgm_ops);
+CREATE INDEX idx_profiles_location 
+ON Profiles USING gin(location gin_trgm_ops);
+
+-- Enable Row Level Security for Profiles
+ALTER TABLE Profiles ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy for Profiles: Users can only view and update their own profile
+CREATE POLICY "Users can view own profile" ON Profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON Profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON Profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Trigger to automatically create a profile when a new user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.Profiles (id, full_name, avatar_url)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'avatar_url');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger the function every time a user is created
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Real-time Messaging System Database Schema
 
 -- Conversations table (for both direct messages and group chats)
 CREATE TABLE Conversations (
@@ -76,6 +126,34 @@ CREATE TABLE PinnedMessages (
   created_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(conversation_id, message_id)
 );
+
+-- Community members table
+CREATE TABLE CommunityMembers (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  community_id BIGINT NOT NULL REFERENCES Communities(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member' CHECK (role IN ('member', 'admin', 'moderator')),
+  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT true,
+
+  UNIQUE(community_id, user_id)
+);
+
+CREATE INDEX idx_community_members_community ON CommunityMembers(community_id);
+CREATE INDEX idx_community_members_user ON CommunityMembers(user_id);
+CREATE INDEX idx_community_members_role ON CommunityMembers(role);
+
+-- Enable Row Level Security for CommunityMembers
+ALTER TABLE CommunityMembers ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy for CommunityMembers
+CREATE POLICY "Users can view own community memberships" ON CommunityMembers
+  FOR SELECT USING (auth.uid() = user_id OR EXISTS (
+    SELECT 1 FROM Communities WHERE Communities.id = CommunityMembers.community_id AND Communities.created_by = auth.uid()
+  ));
+
+CREATE POLICY "Users can manage own community memberships" ON CommunityMembers
+  FOR ALL USING (auth.uid() = user_id);
 
 -- Create indexes for better performance
 CREATE INDEX idx_conversations_type ON Conversations(type);

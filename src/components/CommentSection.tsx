@@ -127,14 +127,14 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
   return (
     <div className="mt-8">
       <h3 className="font-mono text-lg font-bold text-cyan-300 mb-6">// comments</h3>
-      
+
       {/* Comment Input */}
       {user ? (
         <form className="mb-6" onSubmit={handleSubmit}>
           <div className="bg-slate-900 border border-cyan-900/30 rounded-lg p-4">
             <div className="flex gap-4">
               {user?.user_metadata?.avatar_url ? (
-                <img 
+                <img
                   src={user.user_metadata.avatar_url}
                   alt="Your avatar"
                   className="w-10 h-10 rounded-full ring-2 ring-cyan-400/50 shrink-0 object-cover"
@@ -144,7 +144,8 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
               )}
               <div className="flex-1">
                 <textarea
-                  className="w-full bg-slate-800 border border-cyan-900/30 rounded p-3 text-sm text-gray-100 focus:outline-none focus:border-cyan-500/50 resize-none font-mono placeholder-gray-600"
+                  className="w-full bg-slate-800 border border-cyan-900/30 rounded p-3 text-sm text-white focus:outline-none focus:border-cyan-500/50 resize-none font-mono placeholder-gray-600"
+                  style={{ color: '#fff' }}
                   placeholder="$ write your thoughts..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}

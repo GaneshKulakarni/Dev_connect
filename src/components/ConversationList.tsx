@@ -13,13 +13,13 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
 
   const getConversationName = (conversation: ConversationWithDetails) => {
     if (conversation.name) return conversation.name;
-    
+
     // For direct messages, show the other participant's name
     const otherParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
-    return otherParticipant?.user?.user_metadata?.full_name || 
-           otherParticipant?.user?.user_metadata?.user_name || 
-           otherParticipant?.user?.email || 
-           'Unknown User';
+    return otherParticipant?.user?.user_metadata?.full_name ||
+      otherParticipant?.user?.user_metadata?.user_name ||
+      otherParticipant?.user?.email ||
+      'Unknown User';
   };
 
   const getConversationAvatar = (conversation: ConversationWithDetails) => {
@@ -30,7 +30,7 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
         </div>
       );
     }
-    
+
     // For direct messages, show the other participant's avatar
     const otherParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
     if (otherParticipant?.user?.user_metadata?.avatar_url) {
@@ -42,7 +42,7 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
         />
       );
     }
-    
+
     return (
       <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
         <MessageCircle className="w-6 h-6 text-gray-400" />
@@ -55,7 +55,7 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
       const date = new Date(timestamp);
       const now = new Date();
       const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-      
+
       if (diffInMinutes < 1) return 'now';
       if (diffInMinutes < 60) return `${diffInMinutes}m`;
       if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
@@ -75,15 +75,15 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
       {conversations.map((conversation) => {
         const isSelected = selectedConversation?.id === conversation.id;
         const hasUnread = (conversation.unread_count || 0) > 0;
-        
+
         return (
           <div
             key={conversation.id}
             onClick={() => onSelectConversation(conversation)}
             className={`
               p-3 rounded-lg cursor-pointer transition-all duration-200 group
-              ${isSelected 
-                ? 'bg-cyan-900/30 border border-cyan-400/50' 
+              ${isSelected
+                ? 'bg-cyan-900/30 border border-cyan-400/50'
                 : 'hover:bg-slate-800/50 border border-transparent'
               }
             `}
@@ -92,7 +92,7 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
               {/* Avatar */}
               <div className="relative">
                 {getConversationAvatar(conversation)}
-                
+
                 {/* Online indicator for direct messages */}
                 {conversation.type === 'direct' && (
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-slate-900 rounded-full" />
@@ -106,7 +106,7 @@ const ConversationList = ({ conversations, selectedConversation, onSelectConvers
                     <h3 className={`font-medium truncate ${isSelected ? 'text-cyan-300' : 'text-white'}`}>
                       {getConversationName(conversation)}
                     </h3>
-                    
+
                     {/* Conversation Type Icons */}
                     <div className="flex items-center gap-1">
                       {conversation.type === 'group' && (
