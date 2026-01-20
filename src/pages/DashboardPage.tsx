@@ -14,15 +14,71 @@ import {
   Clock,
   Activity,
   LogOut,
-  GitBranch,
   User,
   MessageCircle,
-  ThumbsUp
+  ThumbsUp,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
+
+  // Fetch user stats
+  const { data: userStats, error: statsError } = useQuery({
+    queryKey: ['user-stats', user?.id],
+    queryFn: async () => {
+      if (!user || !supabase) {
+        console.log('Dashboard: No user or supabase client');
+        return { postsCount: 0 };
+      }
+
+      console.log('Dashboard: Fetching posts for user:', user.id);
+
+      const { data: posts, error } = await supabase
+        .from('Posts')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Dashboard: Error fetching posts:', error);
+        throw error;
+      }
+
+      console.log('Dashboard: Posts fetched:', posts?.length || 0, posts);
+
+      return {
+        postsCount: posts?.length || 0
+      };
+    },
+    enabled: !!user
+  });
+
+  // Log stats error if any
+  useEffect(() => {
+    if (statsError) {
+      console.error('Dashboard: Stats query error:', statsError);
+    }
+  }, [statsError]);
+
+  // Fetch user's posts for management
+  const { data: userPosts, isLoading: postsLoading } = useQuery({
+    queryKey: ['user-posts', user?.id],
+    queryFn: async () => {
+      if (!user || !supabase) return [];
+
+      const { data, error } = await supabase
+        .from('Posts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user
+  });
 
   // Fetch user activity
   const { data: recentActivity, isLoading, error } = useQuery({
@@ -52,13 +108,6 @@ export default function DashboardPage() {
       const { data: votes, error: votesError } = await supabase
         .from('Votes')
         .select('id, post_id, vote, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const { data: communityMemberships, error: membershipError } = await supabase
-        .from('CommunityMembers') // Assuming this table exists
-        .select('id, community_id, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -109,17 +158,6 @@ export default function DashboardPage() {
         });
       });
 
-      communityMemberships?.forEach(membership => {
-        allActivities.push({
-          id: `membership-${membership.id}`,
-          action: 'Joined community',
-          title: `Community #${membership.community_id}`,
-          time: membership.created_at,
-          icon: <Users className="w-4 h-4" />,
-          type: 'community'
-        });
-      });
-
       // Sort by most recent
       return allActivities
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
@@ -159,12 +197,27 @@ export default function DashboardPage() {
     }
   ];
 
-  const userStats = [
-    { label: 'Communities Joined', value: '5', icon: <Users className="w-5 h-5" /> },
-    { label: 'Posts Created', value: '12', icon: <Code2 className="w-5 h-5" /> },
-    { label: 'Events Attended', value: '8', icon: <Calendar className="w-5 h-5" /> },
-    { label: 'Following', value: '15', icon: <GitBranch className="w-5 h-5" /> }
-  ];
+  // Delete post function
+  const handleDeletePost = async (postId: number) => {
+    if (!supabase || !confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('Posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      // Refresh the posts list
+      queryClient.invalidateQueries({ queryKey: ['user-posts', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-activity', user?.id] });
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert('Failed to delete post');
+    }
+  };
 
   // Set up real-time subscriptions
   useEffect(() => {
@@ -264,24 +317,19 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {userStats.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 hover:border-cyan-500/30 transition-all duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-cyan-400">{stat.value}</div>
-                  <div className="text-gray-400 text-sm">{stat.label}</div>
-                </div>
-                <div className="p-3 bg-slate-800 rounded-lg text-cyan-400">
-                  {stat.icon}
-                </div>
+        {/* Stats Overview - Only show Posts Created */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 hover:border-cyan-500/30 transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-cyan-400">{userStats?.postsCount || 0}</div>
+                <div className="text-gray-400 text-sm">Posts Created</div>
+              </div>
+              <div className="p-3 bg-slate-800 rounded-lg text-cyan-400">
+                <Code2 className="w-5 h-5" />
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -310,6 +358,62 @@ export default function DashboardPage() {
                   </Link>
                 ))}
               </div>
+            </div>
+
+            {/* My Posts Section */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 mb-8">
+              <h2 className="text-xl font-bold font-mono mb-6 text-cyan-400">
+                My Posts
+              </h2>
+              {postsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-400"></div>
+                  <span className="ml-2 text-gray-400">Loading posts...</span>
+                </div>
+              ) : userPosts && userPosts.length > 0 ? (
+                <div className="space-y-4">
+                  {userPosts.map((post: any) => (
+                    <div key={post.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors">
+                      <div className="flex-1">
+                        <Link to={`/posts/${post.id}`} className="text-cyan-400 hover:text-cyan-300 font-medium">
+                          {post.title}
+                        </Link>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Created {new Date(post.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/edit-post/${post.id}`}
+                          className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                          title="Edit post"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                          title="Delete post"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  <Code2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No posts yet</p>
+                  <Link to="/create" className="text-cyan-400 hover:text-cyan-300 text-sm mt-2 inline-block">
+                    Create your first post →
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Recent Activity */}
