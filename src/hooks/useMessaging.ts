@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { useAuth } from '../hooks/useAuth';
-import type { 
-  Message, 
-  ConversationWithDetails, 
-  CreateConversationData, 
+import { useAuth } from '../context/AuthContext';
+import type {
+  Message,
+  ConversationWithDetails,
+  CreateConversationData,
   SendMessageData,
   UserPresence,
   TypingIndicator
@@ -14,29 +14,61 @@ import type {
 // Hook for fetching conversations
 export const useConversations = () => {
   const { user } = useAuth();
-  
+
   return useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
+      if (!user || !supabase) return [];
+
+      // Query conversations with participants and last message
+      // Join with Profiles table instead of auth.users (which is not directly accessible)
+      const { data: conversations, error: convError } = await supabase
         .from('Conversations')
         .select(`
           *,
           participants:ConversationParticipants(
             *,
-            user:auth.users(id, email, user_metadata)
+            user:Profiles(id, full_name, avatar_url, bio)
           ),
           last_message:Messages(
             *,
-            sender:auth.users(id, email, user_metadata)
+            sender:Profiles(id, full_name, avatar_url)
           )
         `)
         .order('updated_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as ConversationWithDetails[];
+
+      if (convError) throw convError;
+      if (!conversations) return [];
+
+      // Transform to match ConversationWithDetails type
+      const enrichedConversations = conversations.map((conv: any) => ({
+        ...conv,
+        participants: conv.participants?.map((p: any) => ({
+          ...p,
+          user: p.user ? {
+            id: p.user.id,
+            email: '', // Email not available from Profiles, would need separate query
+            user_metadata: {
+              full_name: p.user.full_name,
+              avatar_url: p.user.avatar_url,
+            }
+          } : undefined
+        })) || [],
+        last_message: conv.last_message ? {
+          ...conv.last_message,
+          sender: conv.last_message.sender ? {
+            id: conv.last_message.sender.id,
+            email: '',
+            user_metadata: {
+              full_name: conv.last_message.sender.full_name,
+              avatar_url: conv.last_message.sender.avatar_url,
+            }
+          } : undefined
+        } : undefined,
+        unread_count: 0, // TODO: Calculate actual unread count based on last_read_at
+      }));
+
+      return enrichedConversations as ConversationWithDetails[];
     },
     enabled: !!user,
   });
@@ -45,30 +77,67 @@ export const useConversations = () => {
 // Hook for fetching messages in a conversation
 export const useMessages = (conversationId: number) => {
   const { user } = useAuth();
-  
+
   return useQuery({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
+      if (!supabase) return [];
+
       const { data, error } = await supabase
         .from('Messages')
         .select(`
           *,
-          sender:auth.users(id, email, user_metadata),
+          sender:Profiles(id, full_name, avatar_url),
           reply_to:Messages(
             *,
-            sender:auth.users(id, email, user_metadata)
+            sender:Profiles(id, full_name, avatar_url)
           ),
           reactions:MessageReactions(
             *,
-            user:auth.users(id, email, user_metadata)
+            user:Profiles(id, full_name, avatar_url)
           )
         `)
         .eq('conversation_id', conversationId)
         .eq('is_deleted', false)
         .order('created_at', { ascending: true });
-      
+
       if (error) throw error;
-      return data as Message[];
+
+      // Transform to match Message type with proper user structure
+      const enrichedMessages = data?.map((msg: any) => ({
+        ...msg,
+        sender: msg.sender ? {
+          id: msg.sender.id,
+          email: '',
+          user_metadata: {
+            full_name: msg.sender.full_name,
+            avatar_url: msg.sender.avatar_url,
+          }
+        } : undefined,
+        reply_to: msg.reply_to ? {
+          ...msg.reply_to,
+          sender: msg.reply_to.sender ? {
+            id: msg.reply_to.sender.id,
+            email: '',
+            user_metadata: {
+              full_name: msg.reply_to.sender.full_name,
+              avatar_url: msg.reply_to.sender.avatar_url,
+            }
+          } : undefined
+        } : undefined,
+        reactions: msg.reactions?.map((r: any) => ({
+          ...r,
+          user: r.user ? {
+            id: r.user.id,
+            user_metadata: {
+              full_name: r.user.full_name,
+              avatar_url: r.user.avatar_url,
+            }
+          } : undefined
+        })) || []
+      })) || [];
+
+      return enrichedMessages as Message[];
     },
     enabled: !!user && !!conversationId,
   });
@@ -78,11 +147,11 @@ export const useMessages = (conversationId: number) => {
 export const useCreateConversation = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (data: CreateConversationData) => {
-      if (!user) throw new Error('User not authenticated');
-      
+      if (!user || !supabase) throw new Error('User not authenticated');
+
       // Create conversation
       const { data: conversation, error: convError } = await supabase
         .from('Conversations')
@@ -95,9 +164,9 @@ export const useCreateConversation = () => {
         })
         .select()
         .single();
-      
+
       if (convError) throw convError;
-      
+
       // Add participants
       const participants = [
         { conversation_id: conversation.id, user_id: user.id, role: 'admin' },
@@ -107,13 +176,13 @@ export const useCreateConversation = () => {
           role: 'member' as const
         }))
       ];
-      
+
       const { error: partError } = await supabase
         .from('ConversationParticipants')
         .insert(participants);
-      
+
       if (partError) throw partError;
-      
+
       return conversation;
     },
     onSuccess: () => {
@@ -126,11 +195,11 @@ export const useCreateConversation = () => {
 export const useSendMessage = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (data: SendMessageData) => {
-      if (!user) throw new Error('User not authenticated');
-      
+      if (!user || !supabase) throw new Error('User not authenticated');
+
       const { data: message, error } = await supabase
         .from('Messages')
         .insert({
@@ -144,12 +213,26 @@ export const useSendMessage = () => {
         })
         .select(`
           *,
-          sender:auth.users(id, email, user_metadata)
+          sender:Profiles(id, full_name, avatar_url)
         `)
         .single();
-      
+
       if (error) throw error;
-      return message;
+
+      // Transform to match Message type
+      const enrichedMessage = {
+        ...message,
+        sender: message.sender ? {
+          id: message.sender.id,
+          email: '',
+          user_metadata: {
+            full_name: message.sender.full_name,
+            avatar_url: message.sender.avatar_url,
+          }
+        } : undefined
+      };
+
+      return enrichedMessage;
     },
     onSuccess: (message) => {
       queryClient.invalidateQueries({ queryKey: ['messages', message.conversation_id] });
@@ -162,11 +245,14 @@ export const useSendMessage = () => {
 export const useRealtimeMessages = (conversationId: number) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   useEffect(() => {
-    if (!user || !conversationId) return;
-    
-    const channel = supabase
+    if (!user || !conversationId || !supabase) return;
+
+    // Capture supabase client to ensure it's non-null in cleanup
+    const client = supabase;
+
+    const channel = client
       .channel(`messages:${conversationId}`)
       .on(
         'postgres_changes',
@@ -194,9 +280,9 @@ export const useRealtimeMessages = (conversationId: number) => {
         }
       )
       .subscribe();
-    
+
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
   }, [conversationId, user, queryClient]);
 };
@@ -205,13 +291,16 @@ export const useRealtimeMessages = (conversationId: number) => {
 export const useUserPresence = () => {
   const { user } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState<UserPresence[]>([]);
-  
+
   useEffect(() => {
-    if (!user) return;
-    
+    if (!user || !supabase) return;
+
+    // Capture supabase client to ensure it's non-null in cleanup
+    const client = supabase;
+
     // Update user status to online
     const updatePresence = async () => {
-      await supabase
+      await client
         .from('UserPresence')
         .upsert({
           user_id: user.id,
@@ -219,11 +308,11 @@ export const useUserPresence = () => {
           last_seen: new Date().toISOString(),
         });
     };
-    
+
     updatePresence();
-    
+
     // Set up real-time subscription for presence updates
-    const channel = supabase
+    const channel = client
       .channel('user-presence')
       .on(
         'postgres_changes',
@@ -238,32 +327,32 @@ export const useUserPresence = () => {
         }
       )
       .subscribe();
-    
+
     const fetchPresence = async () => {
-      const { data } = await supabase
+      const { data } = await client
         .from('UserPresence')
         .select('*')
         .eq('status', 'online');
-      
+
       if (data) setOnlineUsers(data);
     };
-    
+
     fetchPresence();
-    
+
     // Update presence every 30 seconds
     const interval = setInterval(updatePresence, 30000);
-    
+
     // Set status to offline on unmount
     return () => {
       clearInterval(interval);
-      supabase.removeChannel(channel);
-      supabase
+      client.removeChannel(channel);
+      client
         .from('UserPresence')
         .update({ status: 'offline', last_seen: new Date().toISOString() })
         .eq('user_id', user.id);
     };
   }, [user]);
-  
+
   return onlineUsers;
 };
 
@@ -271,10 +360,10 @@ export const useUserPresence = () => {
 export const useTypingIndicator = (conversationId: number) => {
   const { user } = useAuth();
   const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
-  
+
   const startTyping = async () => {
-    if (!user || !conversationId) return;
-    
+    if (!user || !conversationId || !supabase) return;
+
     await supabase
       .from('TypingIndicators')
       .upsert({
@@ -282,21 +371,24 @@ export const useTypingIndicator = (conversationId: number) => {
         user_id: user.id,
       });
   };
-  
+
   const stopTyping = async () => {
-    if (!user || !conversationId) return;
-    
+    if (!user || !conversationId || !supabase) return;
+
     await supabase
       .from('TypingIndicators')
       .delete()
       .eq('conversation_id', conversationId)
       .eq('user_id', user.id);
   };
-  
+
   useEffect(() => {
-    if (!conversationId) return;
-    
-    const channel = supabase
+    if (!conversationId || !supabase) return;
+
+    // Capture supabase client to ensure it's non-null in cleanup
+    const client = supabase;
+
+    const channel = client
       .channel(`typing:${conversationId}`)
       .on(
         'postgres_changes',
@@ -307,25 +399,37 @@ export const useTypingIndicator = (conversationId: number) => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         async () => {
-          const { data } = await supabase
+          const { data } = await client
             .from('TypingIndicators')
             .select(`
               *,
-              user:auth.users(id, email, user_metadata)
+              user:Profiles(id, full_name, avatar_url)
             `)
             .eq('conversation_id', conversationId)
             .neq('user_id', user?.id || '');
-          
-          if (data) setTypingUsers(data);
+
+          // Transform to match TypingIndicator type
+          const enrichedData = data?.map((item: any) => ({
+            ...item,
+            user: item.user ? {
+              id: item.user.id,
+              user_metadata: {
+                full_name: item.user.full_name,
+                avatar_url: item.user.avatar_url,
+              }
+            } : undefined
+          })) || [];
+
+          if (enrichedData) setTypingUsers(enrichedData);
         }
       )
       .subscribe();
-    
+
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
   }, [conversationId, user]);
-  
+
   return { typingUsers, startTyping, stopTyping };
 };
 
@@ -333,11 +437,11 @@ export const useTypingIndicator = (conversationId: number) => {
 export const useMessageReactions = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   const addReaction = useMutation({
     mutationFn: async ({ messageId, emoji }: { messageId: number; emoji: string }) => {
-      if (!user) throw new Error('User not authenticated');
-      
+      if (!user || !supabase) throw new Error('User not authenticated');
+
       const { error } = await supabase
         .from('MessageReactions')
         .upsert({
@@ -345,7 +449,7 @@ export const useMessageReactions = () => {
           user_id: user.id,
           emoji,
         });
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -353,24 +457,24 @@ export const useMessageReactions = () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
-  
+
   const removeReaction = useMutation({
     mutationFn: async ({ messageId, emoji }: { messageId: number; emoji: string }) => {
-      if (!user) throw new Error('User not authenticated');
-      
+      if (!user || !supabase) throw new Error('User not authenticated');
+
       const { error } = await supabase
         .from('MessageReactions')
         .delete()
         .eq('message_id', messageId)
         .eq('user_id', user.id)
         .eq('emoji', emoji);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
-  
+
   return { addReaction, removeReaction };
 };

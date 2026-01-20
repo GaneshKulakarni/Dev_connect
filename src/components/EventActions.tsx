@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useEventAttendance } from '../hooks/useEvents';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import type { EventWithDetails } from '../types/events';
 
 interface EventActionsProps {
@@ -60,19 +60,19 @@ export const EventActions = ({ event, className = '' }: EventActionsProps) => {
           {isRegistering ? 'Registering...' : 'Join Event'}
         </button>
       )}
-      
+
       {isRegistered && (
         <div className="bg-green-600/20 text-green-400 px-6 py-3 rounded-lg font-medium">
           ✓ Registered
         </div>
       )}
-      
+
       {isFull && !isRegistered && (
         <div className="bg-slate-600 text-slate-300 px-6 py-3 rounded-lg font-medium">
           Event Full
         </div>
       )}
-      
+
       <button
         onClick={handleShare}
         disabled={isSharing}

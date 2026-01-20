@@ -1,18 +1,18 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase-client';
 import { useEffect } from 'react';
-import { 
-  Users, 
-  MessageSquare, 
-  Calendar, 
-  Code2, 
-  Plus, 
-  Star, 
-  Clock, 
-  Activity, 
+import {
+  Users,
+  MessageSquare,
+  Calendar,
+  Code2,
+  Plus,
+  Star,
+  Clock,
+  Activity,
   LogOut,
   GitBranch,
   User,
@@ -29,40 +29,40 @@ export default function DashboardPage() {
     queryKey: ['user-activity', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+
       // Get user's recent activity from multiple sources
       if (!supabase) {
         throw new Error('Supabase client not available');
       }
-      
+
       const { data: posts, error: postsError } = await supabase
         .from('Posts')
         .select('id, title, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
-      
+
       const { data: comments, error: commentsError } = await supabase
         .from('Comments')
         .select('id, content, created_at, post_id')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
-      
+
       const { data: votes, error: votesError } = await supabase
         .from('Votes')
         .select('id, post_id, vote, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
-      
+
       const { data: communityMemberships, error: membershipError } = await supabase
         .from('CommunityMembers') // Assuming this table exists
         .select('id, community_id, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
-      
+
       // Define activity type
       type Activity = {
         id: string;
@@ -72,10 +72,10 @@ export default function DashboardPage() {
         icon: React.ReactNode;
         type: string;
       };
-      
+
       // Combine and sort all activities by date
       const allActivities: Activity[] = [];
-      
+
       posts?.forEach(post => {
         allActivities.push({
           id: `post-${post.id}`,
@@ -86,7 +86,7 @@ export default function DashboardPage() {
           type: 'post'
         });
       });
-      
+
       comments?.forEach(comment => {
         allActivities.push({
           id: `comment-${comment.id}`,
@@ -97,7 +97,7 @@ export default function DashboardPage() {
           type: 'comment'
         });
       });
-      
+
       votes?.forEach(vote => {
         allActivities.push({
           id: `vote-${vote.id}`,
@@ -108,7 +108,7 @@ export default function DashboardPage() {
           type: 'vote'
         });
       });
-      
+
       communityMemberships?.forEach(membership => {
         allActivities.push({
           id: `membership-${membership.id}`,
@@ -119,7 +119,7 @@ export default function DashboardPage() {
           type: 'community'
         });
       });
-      
+
       // Sort by most recent
       return allActivities
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
@@ -267,7 +267,7 @@ export default function DashboardPage() {
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {userStats.map((stat, index) => (
-            <div 
+            <div
               key={index}
               className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 hover:border-cyan-500/30 transition-all duration-200"
             >
@@ -341,8 +341,8 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="text-xs text-gray-500">
-                          {new Date(activity.time).toLocaleDateString('en-US', { 
-                            month: 'short', 
+                          {new Date(activity.time).toLocaleDateString('en-US', {
+                            month: 'short',
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'

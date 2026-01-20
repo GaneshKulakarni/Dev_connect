@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Comment } from "./CommentSection";
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from "../supabase-client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -92,7 +92,7 @@ export const CommentItem = ({ comment, postId, formatTime }: Props) => {
               )}
             </button>
           )}
-          
+
           {!hasChildren && <div className="w-4"></div>}
           <div className="flex-1">
             {/* Meta info */}

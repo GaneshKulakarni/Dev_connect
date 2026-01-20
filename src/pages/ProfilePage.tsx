@@ -1,4 +1,4 @@
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from "react-router";
 import { User, Mail, Calendar, Shield, Camera, Edit3, Globe, Github, Twitter } from "lucide-react";
 import { format } from "date-fns";
@@ -46,10 +46,10 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    
+
     setIsUpdating(true);
     setUpdateError(null);
-    
+
     try {
       // Handle avatar upload if a new file is selected
       let avatarUrl = user.user_metadata?.avatar_url || "";
@@ -58,7 +58,7 @@ export default function ProfilePage() {
         // For demo mode, we'll use a data URL
         avatarUrl = URL.createObjectURL(avatarFile);
       }
-      
+
       const { error } = await updateProfile({
         full_name: fullName,
         bio: bio,
@@ -68,7 +68,7 @@ export default function ProfilePage() {
         twitter: twitter,
         avatar_url: avatarUrl
       });
-      
+
       if (error) {
         setUpdateError(error.message);
       } else {
@@ -90,7 +90,7 @@ export default function ProfilePage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 h-32"></div>
-          
+
           {/* Profile content */}
           <div className="px-8 pb-8">
             <div className="relative -mt-16 mb-6 flex justify-between items-start">
@@ -307,7 +307,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Social Links</p>
                         <div className="flex flex-wrap gap-2">
                           {user.user_metadata?.website && (
-                            <a 
+                            <a
                               href={user.user_metadata.website.startsWith('http') ? user.user_metadata.website : `https://${user.user_metadata.website}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -318,7 +318,7 @@ export default function ProfilePage() {
                             </a>
                           )}
                           {user.user_metadata?.github && (
-                            <a 
+                            <a
                               href={`https://github.com/${user.user_metadata.github}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -329,7 +329,7 @@ export default function ProfilePage() {
                             </a>
                           )}
                           {user.user_metadata?.twitter && (
-                            <a 
+                            <a
                               href={`https://twitter.com/${user.user_metadata.twitter}`}
                               target="_blank"
                               rel="noopener noreferrer"

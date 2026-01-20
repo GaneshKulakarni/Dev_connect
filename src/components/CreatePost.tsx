@@ -2,7 +2,7 @@ import React, { type ChangeEvent } from 'react'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase-client';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import type { Community } from './CommunityList';
 import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -13,14 +13,14 @@ interface PostInput {
     content: string;
     avatar_url: string | null;
     community_id: number | null;
-}   
+}
 
 const fetchCommunities = async (): Promise<Community[]> => {
     const { data, error } = await supabase
         .from('communities')
         .select('*')
         .order('created_at', { ascending: false });
-    
+
     if (error) {
         throw new Error("Error fetching communities: " + error.message);
     }
@@ -29,7 +29,7 @@ const fetchCommunities = async (): Promise<Community[]> => {
 
 const CreatePost = () => {
     const queryClient = useQueryClient();
-    
+
     const uploadPost = async (post: PostInput, imageFile: File | null, userId: string) => {
         if (!imageFile) {
             throw new Error("Image file is required");
@@ -37,7 +37,7 @@ const CreatePost = () => {
 
         const filePath = `${post.title}-${Date.now()}-${imageFile.name}`;
 
-        const {error: imageError} = await supabase.storage
+        const { error: imageError } = await supabase.storage
             .from('post-images')
             .upload(filePath, imageFile);
 
@@ -45,11 +45,11 @@ const CreatePost = () => {
             throw new Error("Error uploading image: " + imageError.message);
         }
 
-        const {data: publicUrl} = supabase.storage
+        const { data: publicUrl } = supabase.storage
             .from('post-images')
             .getPublicUrl(filePath);
 
-        const {data, error} = await supabase.from("posts").insert({
+        const { data, error } = await supabase.from("posts").insert({
             title: post.title,
             content: post.content,
             image_url: publicUrl.publicUrl,
@@ -69,15 +69,15 @@ const CreatePost = () => {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [communityId, setCommunityId] = useState<number | null>(null);
-    const {user} = useAuth();
+    const { user } = useAuth();
 
     const { data: communities, isLoading: communitiesLoading, isError: communitiesError } = useQuery<Community[], Error>({
         queryKey: ['communities'],
         queryFn: fetchCommunities
     });
 
-    const {mutate, isPending, error, isSuccess} = useMutation({
-        mutationFn: (data: {post: PostInput, imageFile: File | null, userId: string}) => {
+    const { mutate, isPending, error, isSuccess } = useMutation({
+        mutationFn: (data: { post: PostInput, imageFile: File | null, userId: string }) => {
             return uploadPost(data.post, data.imageFile, data.userId);
         },
         onSuccess: () => {
@@ -86,7 +86,7 @@ const CreatePost = () => {
             setImageFile(null);
             setImagePreview(null);
             setCommunityId(null);
-            queryClient.invalidateQueries({queryKey: ['posts']});
+            queryClient.invalidateQueries({ queryKey: ['posts'] });
             setTimeout(() => {
                 window.location.href = '/';
             }, 2000);
@@ -95,12 +95,12 @@ const CreatePost = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!user) {
             alert('You must be logged in to create a post');
             return;
         }
-        
+
         if (!imageFile) {
             alert('Please select an image');
             return;
@@ -115,7 +115,7 @@ const CreatePost = () => {
             alert('Content exceeds character limit');
             return;
         }
-        
+
         mutate({
             post: {
                 title,
@@ -132,7 +132,7 @@ const CreatePost = () => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
             setImageFile(file);
-            
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result as string);
@@ -157,7 +157,7 @@ const CreatePost = () => {
 
             <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <form onSubmit={handleSubmit} className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 space-y-6">
-                    
+
                     {isSuccess && (
                         <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg flex items-center gap-3">
                             <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
@@ -177,7 +177,7 @@ const CreatePost = () => {
 
                     {user?.user_metadata?.avatar_url && (
                         <div className="flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
-                            <img 
+                            <img
                                 src={user.user_metadata.avatar_url}
                                 alt="Your avatar"
                                 className="w-10 h-10 rounded-full ring-2 ring-cyan-500/50"
@@ -266,7 +266,7 @@ const CreatePost = () => {
                                 disabled={isPending}
                                 className="hidden"
                             />
-                            <label 
+                            <label
                                 htmlFor="image"
                                 className="flex items-center justify-center w-full p-6 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-cyan-500/50 hover:bg-cyan-500/5 transition"
                             >
@@ -281,7 +281,7 @@ const CreatePost = () => {
                         {imagePreview && (
                             <div className="mt-4">
                                 <p className="text-xs text-gray-500 mb-2">Preview:</p>
-                                <img 
+                                <img
                                     src={imagePreview}
                                     alt="Preview"
                                     className="w-full h-48 object-cover rounded-lg border border-slate-700"
@@ -290,8 +290,8 @@ const CreatePost = () => {
                         )}
                     </div>
 
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={isPending || isSuccess || content.length > MAX_CHARS}
                         className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors duration-300 ${content.length > MAX_CHARS ? 'bg-red-600 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-700'} text-white disabled:opacity-50`}
                     >

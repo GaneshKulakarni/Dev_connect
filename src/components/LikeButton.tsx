@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { supabase } from '../supabase-client';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 
 interface Props {
     postId: number;
@@ -40,7 +40,7 @@ const like = async (likeValue: number, postId: number, userId: string) => {
         const { error } = await supabase
             .from('Votes')
             .insert({ post_id: postId, user_id: userId, vote: likeValue });
-        
+
         if (error) {
             throw new Error("Error liking post: " + error.message);
         }
@@ -61,9 +61,9 @@ const fetchLikes = async (postId: number): Promise<Vote[]> => {
 const LikeButton = ({ postId, onLikeCountChange }: Props) => {
     const { user } = useAuth();
     const queryClient = useQueryClient();
-    
+
     const { data: votes, isLoading } = useQuery({
-        queryKey: ['votes', postId], 
+        queryKey: ['votes', postId],
         queryFn: () => fetchLikes(postId),
         refetchInterval: 5000,
     });
@@ -102,8 +102,8 @@ const LikeButton = ({ postId, onLikeCountChange }: Props) => {
 
     return (
         <div>
-            <button 
-                className="flex items-center gap-1 transition-all hover:scale-110" 
+            <button
+                className="flex items-center gap-1 transition-all hover:scale-110"
                 onClick={() => {
                     if (!user) {
                         alert("Please log in to like posts");
@@ -112,12 +112,11 @@ const LikeButton = ({ postId, onLikeCountChange }: Props) => {
                     mutate(1);
                 }}
             >
-                <Heart 
-                    className={`w-6 h-6 transition-colors ${
-                        userVote === 1 
-                            ? 'fill-red-500 text-red-500' 
+                <Heart
+                    className={`w-6 h-6 transition-colors ${userVote === 1
+                            ? 'fill-red-500 text-red-500'
                             : 'text-gray-900 hover:text-red-500'
-                    }`}
+                        }`}
                 />
             </button>
         </div>

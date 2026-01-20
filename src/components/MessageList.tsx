@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { useMessageReactions } from '../hooks/useMessaging';
 import { Reply, Edit, Trash2, Download, ExternalLink } from 'lucide-react';
 import type { Message } from '../types/messaging';
@@ -18,14 +18,14 @@ const MessageList = ({ messages }: MessageListProps) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+
     if (messageDate.getTime() === today.getTime()) {
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     } else if (messageDate.getTime() === today.getTime() - 86400000) {
       return `Yesterday ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
     } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + 
-             date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+        date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
   };
 
@@ -34,7 +34,7 @@ const MessageList = ({ messages }: MessageListProps) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+
     if (messageDate.getTime() === today.getTime()) {
       return 'Today';
     } else if (messageDate.getTime() === today.getTime() - 86400000) {
@@ -46,23 +46,23 @@ const MessageList = ({ messages }: MessageListProps) => {
 
   const shouldShowDateSeparator = (currentMessage: Message, previousMessage?: Message) => {
     if (!previousMessage) return true;
-    
+
     const currentDate = new Date(currentMessage.created_at).toDateString();
     const previousDate = new Date(previousMessage.created_at).toDateString();
-    
+
     return currentDate !== previousDate;
   };
 
   const handleReaction = async (messageId: number, emoji: string) => {
     const message = messages.find(m => m.id === messageId);
     const existingReaction = message?.reactions?.find(r => r.user_id === user?.id && r.emoji === emoji);
-    
+
     if (existingReaction) {
       await removeReaction.mutateAsync({ messageId, emoji });
     } else {
       await addReaction.mutateAsync({ messageId, emoji });
     }
-    
+
     setShowEmojiPicker(null);
   };
 
@@ -80,7 +80,7 @@ const MessageList = ({ messages }: MessageListProps) => {
         </div>
       );
     }
-    
+
     if (message.message_type === 'file' && message.file_url) {
       return (
         <div className="mt-2 p-3 bg-slate-800/50 border border-slate-700 rounded-lg flex items-center gap-3">
@@ -102,13 +102,13 @@ const MessageList = ({ messages }: MessageListProps) => {
         </div>
       );
     }
-    
+
     return null;
   };
 
   const renderReplyPreview = (message: Message) => {
     if (!message.reply_to) return null;
-    
+
     return (
       <div className="mb-2 p-2 bg-slate-800/30 border-l-2 border-cyan-400 rounded-r">
         <p className="text-xs text-cyan-400 font-medium">
@@ -123,7 +123,7 @@ const MessageList = ({ messages }: MessageListProps) => {
 
   const renderReactions = (message: Message) => {
     if (!message.reactions || message.reactions.length === 0) return null;
-    
+
     const reactionGroups = message.reactions.reduce((acc, reaction) => {
       if (!acc[reaction.emoji]) {
         acc[reaction.emoji] = [];
@@ -131,20 +131,20 @@ const MessageList = ({ messages }: MessageListProps) => {
       acc[reaction.emoji].push(reaction);
       return acc;
     }, {} as Record<string, typeof message.reactions>);
-    
+
     return (
       <div className="flex flex-wrap gap-1 mt-2">
         {Object.entries(reactionGroups).map(([emoji, reactions]) => {
           const hasUserReacted = reactions.some(r => r.user_id === user?.id);
-          
+
           return (
             <button
               key={emoji}
               onClick={() => handleReaction(message.id, emoji)}
               className={`
                 px-2 py-1 rounded-full text-xs flex items-center gap-1 transition
-                ${hasUserReacted 
-                  ? 'bg-cyan-900/50 border border-cyan-400/50 text-cyan-300' 
+                ${hasUserReacted
+                  ? 'bg-cyan-900/50 border border-cyan-400/50 text-cyan-300'
                   : 'bg-slate-800/50 border border-slate-700 text-gray-300 hover:bg-slate-700/50'
                 }
               `}
@@ -164,7 +164,7 @@ const MessageList = ({ messages }: MessageListProps) => {
         const isOwnMessage = message.sender_id === user?.id;
         const previousMessage = index > 0 ? messages[index - 1] : undefined;
         const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
-        
+
         return (
           <div key={message.id}>
             {/* Date Separator */}
@@ -177,7 +177,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                 </div>
               </div>
             )}
-            
+
             {/* Message */}
             <div className={`flex gap-3 group ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
               {/* Avatar */}
@@ -192,24 +192,24 @@ const MessageList = ({ messages }: MessageListProps) => {
                   ) : (
                     <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
                       <span className="text-xs text-gray-300">
-                        {message.sender?.user_metadata?.full_name?.[0] || 
-                         message.sender?.user_metadata?.user_name?.[0] || 
-                         message.sender?.email?.[0] || '?'}
+                        {message.sender?.user_metadata?.full_name?.[0] ||
+                          message.sender?.user_metadata?.user_name?.[0] ||
+                          message.sender?.email?.[0] || '?'}
                       </span>
                     </div>
                   )}
                 </div>
               )}
-              
+
               {/* Message Content */}
               <div className={`flex-1 max-w-lg ${isOwnMessage ? 'text-right' : ''}`}>
                 {/* Sender Name & Time */}
                 {!isOwnMessage && (
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium text-white">
-                      {message.sender?.user_metadata?.full_name || 
-                       message.sender?.user_metadata?.user_name || 
-                       message.sender?.email}
+                      {message.sender?.user_metadata?.full_name ||
+                        message.sender?.user_metadata?.user_name ||
+                        message.sender?.email}
                     </span>
                     <span className="text-xs text-gray-400">
                       {formatMessageTime(message.created_at)}
@@ -219,26 +219,26 @@ const MessageList = ({ messages }: MessageListProps) => {
                     )}
                   </div>
                 )}
-                
+
                 {/* Message Bubble */}
                 <div
                   className={`
                     relative p-3 rounded-lg break-words
-                    ${isOwnMessage 
-                      ? 'bg-cyan-900/30 border border-cyan-400/50 text-white' 
+                    ${isOwnMessage
+                      ? 'bg-cyan-900/30 border border-cyan-400/50 text-white'
                       : 'bg-slate-800/50 border border-slate-700 text-white'
                     }
                   `}
                 >
                   {/* Reply Preview */}
                   {renderReplyPreview(message)}
-                  
+
                   {/* Message Content */}
                   <p className="whitespace-pre-wrap">{message.content}</p>
-                  
+
                   {/* File Preview */}
                   {renderFilePreview(message)}
-                  
+
                   {/* Own Message Time */}
                   {isOwnMessage && (
                     <div className="flex items-center justify-end gap-2 mt-2 text-xs text-gray-400">
@@ -246,7 +246,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                       <span>{formatMessageTime(message.created_at)}</span>
                     </div>
                   )}
-                  
+
                   {/* Message Actions */}
                   <div className={`
                     absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity
@@ -286,7 +286,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Emoji Picker */}
                 {showEmojiPicker === message.id && (
                   <div className={`
@@ -306,7 +306,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Reactions */}
                 {renderReactions(message)}
               </div>

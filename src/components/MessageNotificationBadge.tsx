@@ -1,5 +1,5 @@
 import { useConversations } from '../hooks/useMessaging';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 
 const MessageNotificationBadge = () => {
   const { user } = useAuth();
